@@ -43,5 +43,9 @@ SHOPIFY_API_VERSION = os.environ.get("SHOPIFY_API_VERSION", "2025-01")
 SHEETS_WEBAPP_URL = _require("SHEETS_WEBAPP_URL")
 SHEETS_SECRET = os.environ.get("SHEETS_SECRET", "")
 
+# --- Site web chiffré (GitHub Pages) ---
+# Mot de passe qui chiffre les données du dashboard (déchiffré côté navigateur)
+SITE_PASSWORD = _require("SITE_PASSWORD")
+
 # Devise (pour l'affichage) — Meta et Shopify sont supposés dans la même devise
 CURRENCY = os.environ.get("CURRENCY", "EUR")

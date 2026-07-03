@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Minca — Dashboard Ads</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+  :root{
+    --bg:#0f1115; --card:#181b22; --line:#262b36; --txt:#e8eaed; --mut:#9aa3b2;
+    --accent:#e29ac0; --accent2:#7cc8e8; --good:#5ed6a0; --bad:#f08a8a; --radius:14px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);color:var(--txt);font-size:14px}
+  a{color:var(--accent2)}
+  /* --- écran login --- */
+  #login{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(1200px 600px at 50% -10%,#20242e,#0f1115);z-index:10}
+  #login .box{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:32px;width:min(360px,90vw);text-align:center}
+  #login h1{margin:0 0 4px;font-size:22px}
+  #login p{color:var(--mut);margin:0 0 20px;font-size:13px}
+  input,select,button{font:inherit}
+  #pw{width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--line);
+    background:#0f1115;color:var(--txt);margin-bottom:12px}
+  .btn{width:100%;padding:12px;border:none;border-radius:10px;background:var(--accent);
+    color:#1a1015;font-weight:600;cursor:pointer}
+  .btn:hover{filter:brightness(1.06)}
+  #err{color:var(--bad);font-size:13px;min-height:18px;margin-top:8px}
+  /* --- app --- */
+  #app{display:none;max-width:1200px;margin:0 auto;padding:20px}
+  header{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px 16px;margin-bottom:18px}
+  header h1{font-size:20px;margin:0}
+  .meta{color:var(--mut);font-size:12.5px}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:22px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px}
+  .card .lbl{color:var(--mut);font-size:12px;margin-bottom:6px}
+  .card .val{font-size:22px;font-weight:700}
+  .card .sub{color:var(--mut);font-size:11.5px;margin-top:3px}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:16px;margin-bottom:22px}
+  .panel h2{font-size:15px;margin:0 0 14px}
+  .controls{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px}
+  .controls input,.controls select{padding:9px 11px;border-radius:9px;border:1px solid var(--line);
+    background:#0f1115;color:var(--txt)}
+  .controls input[type=text]{flex:1;min-width:160px}
+  label.chk{display:flex;align-items:center;gap:6px;color:var(--mut);font-size:13px}
+  .tablewrap{overflow-x:auto}
+  table{border-collapse:collapse;width:100%;font-size:13px;white-space:nowrap}
+  th,td{padding:9px 11px;text-align:right;border-bottom:1px solid var(--line)}
+  th:first-child,td:first-child,th.l,td.l{text-align:left}
+  th{color:var(--mut);font-weight:600;cursor:pointer;user-select:none;position:sticky;top:0;background:var(--card)}
+  th:hover{color:var(--txt)}
+  tbody tr:hover{background:#1e222b}
+  .pill{padding:2px 8px;border-radius:20px;font-size:11.5px;display:inline-block}
+  .pos{color:var(--good)} .neg{color:var(--bad)}
+  .tag{background:#2a2230;color:var(--accent);padding:2px 8px;border-radius:20px;font-size:11px}
+  .tag.org{background:#22303a;color:var(--accent2)}
+  .count{color:var(--mut);font-size:12px;margin-left:8px;font-weight:400}
+  canvas{max-height:280px}
+</style>
+</head>
+<body>
+
+<div id="login">
+  <div class="box">
+    <h1>🌴 Minca — Dashboard Ads</h1>
+    <p>Entre ton mot de passe pour déchiffrer les données</p>
+    <input id="pw" type="password" placeholder="Mot de passe" autofocus>
+    <button class="btn" onclick="unlock()">Voir le dashboard</button>
+    <div id="err"></div>
+  </div>
+</div>
+
+<div id="app">
+  <header>
+    <h1>🌴 Minca — Dashboard Ads</h1>
+    <span class="meta" id="hmeta"></span>
+  </header>
+  <div class="cards" id="cards"></div>
+
+  <div class="panel">
+    <h2>Dépense vs CA Shopify — par campagne</h2>
+    <canvas id="chart"></canvas>
+  </div>
+
+  <div class="panel">
+    <h2>Performance par ad <span class="count" id="adsCount"></span></h2>
+    <div class="controls">
+      <input type="text" id="adSearch" placeholder="Rechercher une ad…">
+      <select id="adCamp"></select>
+    </div>
+    <div class="tablewrap"><table id="adsTable"></table></div>
+  </div>
+
+  <div class="panel">
+    <h2>Détail des commandes via ads <span class="count" id="ordCount"></span></h2>
+    <div class="controls">
+      <input type="text" id="ordSearch" placeholder="Rechercher n° commande, produit…">
+      <select id="ordCamp"></select>
+      <label class="chk"><input type="checkbox" id="ordMeta" checked> Ads Meta uniquement</label>
+    </div>
+    <div class="tablewrap"><table id="ordTable"></table></div>
+  </div>
+</div>
+
+<script>
+let DATA=null, chart=null;
+const $=id=>document.getElementById(id);
+const b64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+
+async function decrypt(enc,pw){
+  const key=await crypto.subtle.deriveKey(
+    {name:'PBKDF2',salt:b64(enc.salt),iterations:enc.iter,hash:'SHA-256'},
+    await crypto.subtle.importKey('raw',new TextEncoder().encode(pw),'PBKDF2',false,['deriveKey']),
+    {name:'AES-GCM',length:256},false,['decrypt']);
+  const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64(enc.iv)},key,b64(enc.ct));
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+
+async function unlock(){
+  const pw=$('pw').value;
+  if(!pw)return;
+  $('err').textContent='Déchiffrement…';
+  try{
+    const enc=await (await fetch('data.enc?t='+Date.now())).json();
+    DATA=await decrypt(enc,pw);
+    sessionStorage.setItem('mpw',pw);
+    $('login').style.display='none';
+    $('app').style.display='block';
+    render();
+  }catch(e){
+    $('err').textContent='Mot de passe incorrect ❌';
+    sessionStorage.removeItem('mpw');
+  }
+}
+
+let fmtCur,fmtNum;
+function render(){
+  const c=DATA.currency||'EUR';
+  fmtCur=new Intl.NumberFormat('fr-FR',{style:'currency',currency:c,maximumFractionDigits:0});
+  fmtNum=new Intl.NumberFormat('fr-FR');
+  const s=DATA.summary;
+  $('hmeta').innerHTML=`Mis à jour le ${DATA.updated} · fenêtre <b>${DATA.window}</b>`;
+  const cards=[
+    ['Dépense',fmtCur.format(s.spend)],
+    ['CA Shopify (via ads)',fmtCur.format(s.shop_revenue_ads),`${s.shop_orders_ads} commandes`],
+    ['ROAS réel',s.real_roas+'×',`Meta annonce ${s.meta_roas}×`],
+    ['Purchases Meta',fmtNum.format(s.meta_purchases),`vs ${s.shop_orders_ads} Shopify`],
+    ['Visites site',fmtNum.format(s.visits)],
+    ['Clics',fmtNum.format(s.clicks)],
+    ['CA boutique TOTAL',fmtCur.format(s.shop_revenue_total),`${s.shop_orders_total} commandes`],
+    ['CA attribué Meta',fmtCur.format(s.meta_value)],
+  ];
+  $('cards').innerHTML=cards.map(([l,v,sub])=>
+    `<div class="card"><div class="lbl">${l}</div><div class="val">${v}</div>${sub?`<div class="sub">${sub}</div>`:''}</div>`).join('');
+
+  fillCampaigns();
+  drawChart();
+  renderAds();
+  renderOrders();
+}
+
+function uniqCamps(){
+  return [...new Set(DATA.ads.map(a=>a.campaign).filter(Boolean))].sort();
+}
+function fillCampaigns(){
+  const camps=uniqCamps();
+  const opts='<option value="">Toutes les campagnes</option>'+camps.map(c=>`<option>${esc(c)}</option>`).join('');
+  $('adCamp').innerHTML=opts; $('ordCamp').innerHTML=opts;
+}
+
+function drawChart(){
+  const agg={};
+  DATA.ads.forEach(a=>{
+    const k=a.campaign||'—';
+    agg[k]=agg[k]||{spend:0,rev:0};
+    agg[k].spend+=a.spend; agg[k].rev+=a.shop_revenue;
+  });
+  const labels=Object.keys(agg).sort((a,b)=>agg[b].spend-agg[a].spend);
+  if(chart)chart.destroy();
+  chart=new Chart($('chart'),{type:'bar',data:{labels,datasets:[
+    {label:'Dépense',data:labels.map(l=>agg[l].spend),backgroundColor:'#e29ac0'},
+    {label:'CA Shopify',data:labels.map(l=>agg[l].rev),backgroundColor:'#5ed6a0'},
+  ]},options:{responsive:true,plugins:{legend:{labels:{color:'#e8eaed'}}},
+    scales:{x:{ticks:{color:'#9aa3b2'},grid:{display:false}},
+            y:{ticks:{color:'#9aa3b2'},grid:{color:'#262b36'}}}}});
+}
+
+const esc=s=>String(s??'').replace(/[<>&]/g,m=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[m]));
+function sortState(t){t._sc=t._sc||{k:null,dir:1};return t._sc;}
+function makeTable(el,cols,rows){
+  const st=sortState(el);
+  if(st.k){rows=[...rows].sort((a,b)=>{
+    let x=a[st.k],y=b[st.k];
+    if(typeof x==='number'&&typeof y==='number')return (x-y)*st.dir;
+    return String(x).localeCompare(String(y),'fr')*st.dir;
+  });}
+  el.innerHTML='<thead><tr>'+cols.map(c=>
+    `<th class="${c.l?'l':''}" data-k="${c.k}">${c.t}${st.k===c.k?(st.dir>0?' ▲':' ▼'):''}</th>`).join('')+'</tr></thead>'+
+    '<tbody>'+rows.map(r=>'<tr>'+cols.map(c=>
+      `<td class="${c.l?'l':''}">${c.f?c.f(r[c.k],r):esc(r[c.k])}</td>`).join('')+'</tr>').join('')+'</tbody>';
+  el.querySelectorAll('th').forEach(th=>th.onclick=()=>{
+    const k=th.dataset.k; if(st.k===k)st.dir*=-1; else{st.k=k;st.dir=1;}
+    (el===$('adsTable')?renderAds:renderOrders)();
+  });
+}
+
+function renderAds(){
+  const q=$('adSearch').value.toLowerCase(), camp=$('adCamp').value;
+  let rows=DATA.ads.filter(a=>
+    (!camp||a.campaign===camp) &&
+    (!q||(a.ad+a.campaign+a.adset).toLowerCase().includes(q)));
+  const cur=v=>fmtCur.format(v||0), num=v=>fmtNum.format(v||0);
+  const roas=v=>`<span class="${v>=1?'pos':'neg'}">${(v||0).toFixed(2)}×</span>`;
+  makeTable($('adsTable'),[
+    {k:'ad',t:'Ad',l:1},{k:'campaign',t:'Campagne',l:1},
+    {k:'spend',t:'Dépense',f:cur},{k:'clicks',t:'Clics',f:num},
+    {k:'visits',t:'Visites',f:num},
+    {k:'meta_purchases',t:'Achats Meta',f:num},
+    {k:'shop_orders',t:'Cmd Shopify',f:num},
+    {k:'shop_revenue',t:'CA Shopify',f:cur},
+    {k:'meta_roas',t:'ROAS Meta',f:roas},
+    {k:'real_roas',t:'ROAS réel',f:roas},
+    {k:'cpc',t:'CPC',f:cur},{k:'ctr',t:'CTR',f:v=>(v||0).toFixed(2)+'%'},
+    {k:'cost_per_purchase',t:'Coût/achat',f:cur},
+  ],rows);
+  $('adsCount').textContent=`(${rows.length})`;
+}
+
+function renderOrders(){
+  const q=$('ordSearch').value.toLowerCase(), camp=$('ordCamp').value, metaOnly=$('ordMeta').checked;
+  let rows=DATA.orders.filter(o=>
+    (!metaOnly||o.is_meta_ad) &&
+    (!camp||o.campaign===camp) &&
+    (!q||(o.order+o.source+o.products+o.campaign).toLowerCase().includes(q)));
+  const cur=v=>fmtCur.format(v||0);
+  const src=(v,r)=>`<span class="tag ${r.is_meta_ad?'':'org'}">${esc(v)}</span>`;
+  makeTable($('ordTable'),[
+    {k:'order',t:'N° commande',l:1},{k:'date',t:'Date',l:1},
+    {k:'source',t:'Source',l:1,f:src},{k:'campaign',t:'Campagne',l:1},
+    {k:'items',t:'Articles'},{k:'amount',t:'Montant',f:cur},
+    {k:'status',t:'Statut',l:1,f:v=>`<span class="pill">${esc(v)}</span>`},
+    {k:'products',t:'Produits',l:1},
+  ],rows);
+  $('ordCount').textContent=`(${rows.length})`;
+}
+
+['adSearch','adCamp'].forEach(id=>$(id).addEventListener('input',renderAds));
+['ordSearch','ordCamp','ordMeta'].forEach(id=>$(id).addEventListener('input',renderOrders));
+$('pw').addEventListener('keydown',e=>{if(e.key==='Enter')unlock();});
+
+// Auto-déverrouillage si le mot de passe est déjà en session
+window.addEventListener('load',()=>{
+  const saved=sessionStorage.getItem('mpw');
+  if(saved){$('pw').value=saved;unlock();}
+});
+</script>
+</body>
+</html>

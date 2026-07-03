@@ -60,10 +60,12 @@ def _extract_ad_id(landing_site: str) -> str | None:
 
 
 def fetch_orders_by_ad():
-    """Renvoie (par_ad, totaux).
+    """Renvoie (par_ad, totaux, commandes).
 
-    par_ad : dict { ad_id -> {"orders": n, "revenue": float} }
-    totaux : dict global { "orders", "revenue", "orders_from_meta", "revenue_from_meta" }
+    par_ad     : dict { utm_content -> {"orders": n, "revenue": float} }
+    totaux     : dict { "orders", "revenue", "orders_from_meta", "revenue_from_meta" }
+    commandes  : liste des commandes taguées (une par commande avec un utm_content),
+                 chacune : {order, date, utm_content, is_meta_ad, items, amount, status, products}
     """
     base = f"https://{config.SHOPIFY_STORE}/admin/api/{config.SHOPIFY_API_VERSION}/orders.json"
     headers = {"X-Shopify-Access-Token": get_access_token()}
@@ -71,10 +73,11 @@ def fetch_orders_by_ad():
         "status": "any",
         "created_at_min": _created_at_min(),
         "limit": 250,
-        "fields": "id,total_price,landing_site,created_at,financial_status,cancelled_at",
+        "fields": "id,name,total_price,landing_site,created_at,financial_status,cancelled_at,line_items",
     }
 
     by_ad = {}
+    orders_detail = []
     totals = {"orders": 0, "revenue": 0.0, "orders_from_meta": 0, "revenue_from_meta": 0.0}
     url = base
 
@@ -99,6 +102,18 @@ def fetch_orders_by_ad():
                 totals["orders_from_meta"] += 1
                 totals["revenue_from_meta"] += revenue
 
+                line_items = o.get("line_items", []) or []
+                orders_detail.append({
+                    "order": o.get("name", ""),                       # ex: #1234
+                    "date": (o.get("created_at") or "")[:10],
+                    "utm_content": ad_id,
+                    "is_meta_ad": ad_id.isdigit(),                    # un ID d'ad Meta = que des chiffres
+                    "items": sum(int(li.get("quantity", 0)) for li in line_items),
+                    "amount": round(revenue, 2),
+                    "status": o.get("financial_status", ""),
+                    "products": ", ".join(li.get("title", "") for li in line_items)[:120],
+                })
+
         # Pagination Shopify via l'en-tête Link (rel="next")
         url = _next_link(resp.headers.get("Link", ""))
         params = None  # l'URL next contient déjà tout
@@ -109,7 +124,7 @@ def fetch_orders_by_ad():
     for v in by_ad.values():
         v["revenue"] = round(v["revenue"], 2)
 
-    return by_ad, totals
+    return by_ad, totals, orders_detail
 
 
 def _next_link(link_header: str):
@@ -126,6 +141,6 @@ def _next_link(link_header: str):
 
 
 if __name__ == "__main__":
-    by_ad, totals = fetch_orders_by_ad()
+    by_ad, totals, detail = fetch_orders_by_ad()
     print("Totaux :", totals)
-    print(f"{len(by_ad)} ads avec commandes attribuées")
+    print(f"{len(by_ad)} sources taguées, {len(detail)} commandes détaillées")

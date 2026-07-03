@@ -1,7 +1,8 @@
-"""Point d'entrée : récupère Meta + Shopify et met à jour le Google Sheet."""
+"""Point d'entrée : récupère Meta + Shopify, met à jour le Google Sheet et le site chiffré."""
 import meta
 import shopify_client
 import sheets
+import site_data
 
 
 def run():
@@ -10,12 +11,16 @@ def run():
     print(f"  {len(meta_rows)} ads récupérées")
 
     print("→ Récupération des commandes Shopify…")
-    shop_by_ad, shop_totals = shopify_client.fetch_orders_by_ad()
-    print(f"  {shop_totals['orders']} commandes ({shop_totals['orders_from_meta']} attribuées à une ad)")
+    by_ad, totals, orders_detail = shopify_client.fetch_orders_by_ad()
+    print(f"  {totals['orders']} commandes ({totals['orders_from_meta']} attribuées, "
+          f"{len(orders_detail)} détaillées)")
 
     print("→ Écriture dans Google Sheets…")
-    n = sheets.write(meta_rows, shop_by_ad, shop_totals)
-    print(f"✅ Terminé — {n} ads écrites dans le Sheet.")
+    sheets.write(meta_rows, by_ad, totals)
+
+    print("→ Génération du site chiffré…")
+    n_ads, n_orders = site_data.build(meta_rows, by_ad, totals, orders_detail)
+    print(f"✅ Terminé — {n_ads} ads + {n_orders} commandes dans le dashboard.")
 
 
 if __name__ == "__main__":
