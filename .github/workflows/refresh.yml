@@ -1,0 +1,32 @@
+name: Rafraîchir le dashboard Pareo Ads
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"   # toutes les 30 minutes
+  workflow_dispatch:          # permet de lancer manuellement depuis l'onglet Actions
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Installer les dépendances
+        run: pip install -r requirements.txt
+
+      - name: Mettre à jour le Google Sheet
+        env:
+          META_ACCESS_TOKEN: ${{ secrets.META_ACCESS_TOKEN }}
+          META_AD_ACCOUNT_ID: ${{ secrets.META_AD_ACCOUNT_ID }}
+          META_DATE_PRESET: ${{ secrets.META_DATE_PRESET }}
+          SHOPIFY_STORE: ${{ secrets.SHOPIFY_STORE }}
+          SHOPIFY_CLIENT_ID: ${{ secrets.SHOPIFY_CLIENT_ID }}
+          SHOPIFY_CLIENT_SECRET: ${{ secrets.SHOPIFY_CLIENT_SECRET }}
+          SHEETS_WEBAPP_URL: ${{ secrets.SHEETS_WEBAPP_URL }}
+          SHEETS_SECRET: ${{ secrets.SHEETS_SECRET }}
+          CURRENCY: ${{ secrets.CURRENCY }}
+        run: python main.py
