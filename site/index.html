@@ -4,89 +4,157 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Minca — Dashboard Ads</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <style>
   :root{
-    --bg:#0f1115; --card:#181b22; --line:#262b36; --txt:#e8eaed; --mut:#9aa3b2;
-    --accent:#e29ac0; --accent2:#7cc8e8; --good:#5ed6a0; --bad:#f08a8a; --radius:14px;
+    --bg:#FBF9F4; --card:#FFFFFF; --line:#ECE6DC; --txt:#2E2A26; --mut:#A79E90;
+    --coral:#E58A6F; --gold:#E0B15C; --teal:#6DAAA6; --pink:#E3A9B6;
+    --good:#4FA07C; --bad:#D9705F; --radius:18px;
+    --shadow:0 6px 26px rgba(80,64,48,.06);
   }
   *{box-sizing:border-box}
-  body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
-    background:var(--bg);color:var(--txt);font-size:14px}
-  a{color:var(--accent2)}
-  /* --- écran login --- */
+  body{margin:0;font-family:'Jost',-apple-system,Segoe UI,Roboto,sans-serif;
+    background:var(--bg);color:var(--txt);font-size:14px;-webkit-font-smoothing:antialiased}
+  h1,h2{font-weight:400}
+  .serif{font-family:'Fraunces',Georgia,serif}
+  .eyebrow{text-transform:uppercase;letter-spacing:.18em;font-size:11px;color:var(--mut);font-weight:500}
+
   #login{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
-    background:radial-gradient(1200px 600px at 50% -10%,#20242e,#0f1115);z-index:10}
-  #login .box{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
-    padding:32px;width:min(360px,90vw);text-align:center}
-  #login h1{margin:0 0 4px;font-size:22px}
-  #login p{color:var(--mut);margin:0 0 20px;font-size:13px}
-  input,select,button{font:inherit}
-  #pw{width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--line);
-    background:#0f1115;color:var(--txt);margin-bottom:12px}
-  .btn{width:100%;padding:12px;border:none;border-radius:10px;background:var(--accent);
-    color:#1a1015;font-weight:600;cursor:pointer}
-  .btn:hover{filter:brightness(1.06)}
-  #err{color:var(--bad);font-size:13px;min-height:18px;margin-top:8px}
-  /* --- app --- */
-  #app{display:none;max-width:1200px;margin:0 auto;padding:20px}
-  header{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px 16px;margin-bottom:18px}
-  header h1{font-size:20px;margin:0}
-  .meta{color:var(--mut);font-size:12.5px}
-  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:22px}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px}
-  .card .lbl{color:var(--mut);font-size:12px;margin-bottom:6px}
-  .card .val{font-size:22px;font-weight:700}
-  .card .sub{color:var(--mut);font-size:11.5px;margin-top:3px}
+    background:linear-gradient(160deg,#FFFDF9 0%,#FBEFE8 55%,#F3E8DC 100%);z-index:10;padding:20px}
+  #login .box{background:var(--card);border:1px solid var(--line);border-radius:26px;
+    padding:44px 36px;width:min(380px,92vw);text-align:center;box-shadow:0 20px 60px rgba(120,90,70,.12)}
+  #login .sun{font-size:34px}
+  #login h1{margin:10px 0 6px;font-size:27px}
+  #login p{color:var(--mut);margin:0 0 24px;font-size:13.5px}
+  input,select,button{font:inherit;color:var(--txt)}
+  #pw{width:100%;padding:13px 16px;border-radius:12px;border:1px solid var(--line);
+    background:#FCFAF6;margin-bottom:14px;outline:none}
+  #pw:focus{border-color:var(--coral)}
+  .btn{width:100%;padding:13px;border:none;border-radius:12px;background:var(--coral);
+    color:#fff;font-weight:500;letter-spacing:.03em;cursor:pointer;transition:.15s}
+  .btn:hover{filter:brightness(1.04);transform:translateY(-1px)}
+  #err{color:var(--bad);font-size:13px;min-height:18px;margin-top:10px}
+
+  #app{display:none;max-width:1180px;margin:0 auto;padding:38px 26px 70px}
+  header.top{margin-bottom:22px}
+  header.top h1{font-size:34px;margin:6px 0 4px}
+  .meta{color:var(--mut);font-size:13px}
+  .meta b{color:var(--txt);font-weight:500}
+
+  /* période */
+  .period{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:20px 0 34px;
+    background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 16px;box-shadow:var(--shadow)}
+  .period .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--mut);margin-right:4px}
+  .seg{display:flex;background:#F5EFE6;border-radius:11px;padding:3px;gap:2px}
+  .seg button{border:none;background:transparent;padding:8px 14px;border-radius:9px;cursor:pointer;
+    color:var(--mut);font-size:13px;transition:.12s}
+  .seg button.active{background:#fff;color:var(--txt);box-shadow:0 1px 4px rgba(0,0,0,.06)}
+  .dates{display:flex;align-items:center;gap:7px;margin-left:auto;color:var(--mut);font-size:13px}
+  .dates input{padding:8px 10px;border-radius:9px;border:1px solid var(--line);background:#FCFAF6;outline:none}
+  .dates input:focus{border-color:var(--coral)}
+
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:16px;margin-bottom:40px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:20px 22px;box-shadow:var(--shadow)}
+  .card .lbl{text-transform:uppercase;letter-spacing:.12em;font-size:10.5px;color:var(--mut);margin-bottom:10px}
+  .card .val{font-size:27px;font-weight:500;line-height:1.1}
+  .card .sub{color:var(--mut);font-size:12px;margin-top:6px}
+  .card.hl{background:linear-gradient(160deg,#FFF6F1,#FDECE4);border-color:#F4D9CC}
+
   .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
-    padding:16px;margin-bottom:22px}
-  .panel h2{font-size:15px;margin:0 0 14px}
-  .controls{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px}
-  .controls input,.controls select{padding:9px 11px;border-radius:9px;border:1px solid var(--line);
-    background:#0f1115;color:var(--txt)}
-  .controls input[type=text]{flex:1;min-width:160px}
-  label.chk{display:flex;align-items:center;gap:6px;color:var(--mut);font-size:13px}
-  .tablewrap{overflow-x:auto}
-  table{border-collapse:collapse;width:100%;font-size:13px;white-space:nowrap}
-  th,td{padding:9px 11px;text-align:right;border-bottom:1px solid var(--line)}
+    padding:26px 26px 22px;margin-bottom:30px;box-shadow:var(--shadow)}
+  .panel .eyebrow{margin-bottom:16px}
+  .panel h2{font-size:19px;margin:2px 0 18px}
+  .count{color:var(--mut);font-size:14px;margin-left:6px}
+
+  .controls{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:18px}
+  .controls input,.controls select{padding:11px 14px;border-radius:11px;border:1px solid var(--line);
+    background:#FCFAF6;outline:none}
+  .controls input:focus,.controls select:focus{border-color:var(--coral)}
+  .controls input[type=text]{flex:1;min-width:180px}
+  label.chk{display:flex;align-items:center;gap:7px;color:var(--mut);font-size:13.5px;cursor:pointer}
+
+  .tablewrap{overflow-x:auto;margin:0 -6px}
+  table{border-collapse:collapse;width:100%;font-size:13.5px;white-space:nowrap}
+  th,td{padding:12px 14px;text-align:right;border-bottom:1px solid #F2EDE4}
   th:first-child,td:first-child,th.l,td.l{text-align:left}
-  th{color:var(--mut);font-weight:600;cursor:pointer;user-select:none;position:sticky;top:0;background:var(--card)}
+  th{color:var(--mut);font-weight:500;cursor:pointer;user-select:none;position:sticky;top:0;
+    background:var(--card);text-transform:uppercase;letter-spacing:.06em;font-size:11px;border-bottom:1px solid var(--line)}
   th:hover{color:var(--txt)}
-  tbody tr:hover{background:#1e222b}
-  .pill{padding:2px 8px;border-radius:20px;font-size:11.5px;display:inline-block}
-  .pos{color:var(--good)} .neg{color:var(--bad)}
-  .tag{background:#2a2230;color:var(--accent);padding:2px 8px;border-radius:20px;font-size:11px}
-  .tag.org{background:#22303a;color:var(--accent2)}
-  .count{color:var(--mut);font-size:12px;margin-left:8px;font-weight:400}
-  canvas{max-height:280px}
+  tbody tr{transition:background .1s}
+  tbody tr:hover{background:#FBF6EF}
+  tbody tr:last-child td{border-bottom:none}
+  tbody.clik tr{cursor:pointer}
+  .pos{color:var(--good);font-weight:500} .neg{color:var(--bad);font-weight:500}
+  .pill{padding:3px 11px;border-radius:20px;font-size:11.5px;background:#F1F5F1;color:var(--good)}
+  .tag{padding:3px 11px;border-radius:20px;font-size:11.5px;background:#FCEBE3;color:#C96A4C;font-weight:500}
+  .tag.org{background:#E7F1F0;color:#3E8582}
+  .new{padding:3px 10px;border-radius:20px;font-size:11px;background:#FBEEDD;color:#B7862F;font-weight:500}
+  .rec{color:var(--mut);font-size:12px}
+  canvas{max-height:300px}
+
+  /* modal */
+  .modal{position:fixed;inset:0;background:rgba(46,42,38,.4);display:none;align-items:center;
+    justify-content:center;z-index:20;padding:20px;backdrop-filter:blur(2px)}
+  .modal.open{display:flex}
+  .mbox{background:#fff;border-radius:22px;width:min(520px,94vw);max-height:88vh;overflow:auto;
+    padding:30px;box-shadow:0 30px 80px rgba(80,60,45,.25)}
+  .mbox .x{float:right;border:none;background:#F5EFE6;width:32px;height:32px;border-radius:50%;
+    cursor:pointer;color:var(--mut);font-size:16px}
+  .mhead{font-size:24px;margin:0 0 4px}
+  .mrow{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #F2EDE4;font-size:14px}
+  .mrow span:first-child{color:var(--mut)}
+  .mprod{display:flex;justify-content:space-between;padding:8px 0;font-size:13.5px;border-bottom:1px dashed #EEE7DC}
+  @media(max-width:600px){#app{padding:26px 16px 50px}header.top h1{font-size:27px}.card .val{font-size:23px}.dates{margin-left:0;width:100%}}
 </style>
 </head>
 <body>
 
 <div id="login">
   <div class="box">
-    <h1>🌴 Minca — Dashboard Ads</h1>
-    <p>Entre ton mot de passe pour déchiffrer les données</p>
+    <div class="sun">🌞</div>
+    <h1 class="serif">Minca</h1>
+    <p>Ton tableau de bord ads — entre ton mot de passe</p>
     <input id="pw" type="password" placeholder="Mot de passe" autofocus>
-    <button class="btn" onclick="unlock()">Voir le dashboard</button>
+    <button class="btn" onclick="unlock()">Entrer</button>
     <div id="err"></div>
   </div>
 </div>
 
 <div id="app">
-  <header>
-    <h1>🌴 Minca — Dashboard Ads</h1>
-    <span class="meta" id="hmeta"></span>
+  <header class="top">
+    <div class="eyebrow">Tableau de bord publicités</div>
+    <h1 class="serif">Minca</h1>
+    <div class="meta" id="hmeta"></div>
   </header>
+
+  <div class="period">
+    <span class="lbl">Période</span>
+    <div class="seg" id="seg">
+      <button data-d="1">Aujourd'hui</button>
+      <button data-d="7">7 jours</button>
+      <button data-d="30">30 jours</button>
+      <button data-d="90">90 jours</button>
+    </div>
+    <div class="dates">
+      <input type="date" id="from"> <span>→</span> <input type="date" id="to">
+    </div>
+  </div>
+
   <div class="cards" id="cards"></div>
 
   <div class="panel">
+    <div class="eyebrow">Vue d'ensemble</div>
     <h2>Dépense vs CA Shopify — par campagne</h2>
     <canvas id="chart"></canvas>
   </div>
 
   <div class="panel">
-    <h2>Performance par ad <span class="count" id="adsCount"></span></h2>
+    <div class="eyebrow">Performance</div>
+    <h2>Par ad <span class="count" id="adsCount"></span></h2>
     <div class="controls">
       <input type="text" id="adSearch" placeholder="Rechercher une ad…">
       <select id="adCamp"></select>
@@ -95,9 +163,10 @@
   </div>
 
   <div class="panel">
-    <h2>Détail des commandes via ads <span class="count" id="ordCount"></span></h2>
+    <div class="eyebrow">Ventes</div>
+    <h2>Commandes via ads <span class="count" id="ordCount"></span></h2>
     <div class="controls">
-      <input type="text" id="ordSearch" placeholder="Rechercher n° commande, produit…">
+      <input type="text" id="ordSearch" placeholder="Rechercher n° commande, produit, pays…">
       <select id="ordCamp"></select>
       <label class="chk"><input type="checkbox" id="ordMeta" checked> Ads Meta uniquement</label>
     </div>
@@ -105,10 +174,16 @@
   </div>
 </div>
 
+<div class="modal" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="mbox" id="mbody"></div>
+</div>
+
 <script>
-let DATA=null, chart=null;
+let DATA=null, chart=null, fmtCur, fmtNum;
 const $=id=>document.getElementById(id);
 const b64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+const esc=s=>String(s??'').replace(/[<>&]/g,m=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[m]));
+const addDays=(d,n)=>new Date(new Date(d+'T00:00:00Z').getTime()+n*864e5).toISOString().slice(0,10);
 
 async function decrypt(enc,pw){
   const key=await crypto.subtle.deriveKey(
@@ -120,142 +195,198 @@ async function decrypt(enc,pw){
 }
 
 async function unlock(){
-  const pw=$('pw').value;
-  if(!pw)return;
+  const pw=$('pw').value; if(!pw)return;
   $('err').textContent='Déchiffrement…';
   try{
     const enc=await (await fetch('data.enc?t='+Date.now())).json();
     DATA=await decrypt(enc,pw);
     sessionStorage.setItem('mpw',pw);
-    $('login').style.display='none';
-    $('app').style.display='block';
-    render();
-  }catch(e){
-    $('err').textContent='Mot de passe incorrect ❌';
-    sessionStorage.removeItem('mpw');
-  }
+    $('login').style.display='none'; $('app').style.display='block';
+    initDashboard();
+  }catch(e){ $('err').textContent='Mot de passe incorrect'; sessionStorage.removeItem('mpw'); }
 }
 
-let fmtCur,fmtNum;
-function render(){
+// lookup ad_id -> {ad, campaign}
+let AD_LOOKUP={};
+function initDashboard(){
   const c=DATA.currency||'EUR';
   fmtCur=new Intl.NumberFormat('fr-FR',{style:'currency',currency:c,maximumFractionDigits:0});
   fmtNum=new Intl.NumberFormat('fr-FR');
-  const s=DATA.summary;
-  $('hmeta').innerHTML=`Mis à jour le ${DATA.updated} · fenêtre <b>${DATA.window}</b>`;
+  AD_LOOKUP={};
+  DATA.ads_daily.forEach(r=>{AD_LOOKUP[r.ad_id]={ad:r.ad,campaign:r.campaign};});
+  const maxD=DATA.today, minD=addDays(maxD,-(DATA.fetch_days-1));
+  $('from').min=minD; $('from').max=maxD; $('to').min=minD; $('to').max=maxD;
+  setPreset(30);
+  $('seg').querySelectorAll('button').forEach(b=>b.onclick=()=>setPreset(+b.dataset.d));
+  ['from','to'].forEach(id=>$(id).addEventListener('change',()=>{markSeg(null);compute();}));
+  ['adSearch','adCamp'].forEach(id=>$(id).addEventListener('input',renderAds));
+  ['ordSearch','ordCamp','ordMeta'].forEach(id=>$(id).addEventListener('input',renderOrders));
+}
+function markSeg(d){$('seg').querySelectorAll('button').forEach(b=>b.classList.toggle('active',+b.dataset.d===d));}
+function setPreset(d){
+  const to=DATA.today, from=d<=1?to:addDays(to,-(d-1));
+  $('from').value=from; $('to').value=to; markSeg(d); compute();
+}
+
+let PERIOD={};
+function compute(){
+  const from=$('from').value, to=$('to').value;
+  // agrège ads par ad_id sur la période
+  const A={};
+  DATA.ads_daily.forEach(r=>{
+    if(r.date<from||r.date>to)return;
+    const a=A[r.ad_id]||(A[r.ad_id]={ad:r.ad,campaign:r.campaign,adset:r.adset,ad_id:r.ad_id,
+      spend:0,impressions:0,clicks:0,link_clicks:0,visits:0,mp:0,mv:0});
+    a.spend+=r.spend;a.impressions+=r.impressions;a.clicks+=r.clicks;a.link_clicks+=r.link_clicks;
+    a.visits+=r.visits;a.mp+=r.mp;a.mv+=r.mv;
+  });
+  // commandes de la période (avec source/campagne résolues)
+  const orders=DATA.orders.filter(o=>o.date>=from&&o.date<=to).map(o=>{
+    const L=AD_LOOKUP[o.ad_id];
+    const source=o.is_meta_ad?(L?L.ad:'Ad '+o.ad_id):(o.ad_id||'—');
+    const campaign=o.is_meta_ad?(L?L.campaign:'Meta (ad archivée)'):'—';
+    return {...o,source,campaign};
+  });
+  // CA Shopify par ad (ads Meta)
+  const shopByAd={};
+  orders.forEach(o=>{if(o.is_meta_ad){const s=shopByAd[o.ad_id]||(shopByAd[o.ad_id]={o:0,r:0});s.o++;s.r+=o.amount;}});
+  const ads=Object.values(A).map(a=>{
+    const s=shopByAd[a.ad_id]||{o:0,r:0};
+    return {...a,spend:+a.spend.toFixed(2),mv:+a.mv.toFixed(2),
+      shop_orders:s.o,shop_revenue:+s.r.toFixed(2),
+      cpc:a.clicks?a.spend/a.clicks:0, ctr:a.impressions?a.clicks/a.impressions*100:0,
+      cost_per_purchase:a.mp?a.spend/a.mp:0,
+      meta_roas:a.spend?a.mv/a.spend:0, real_roas:a.spend?s.r/a.spend:0};
+  }).sort((x,y)=>y.spend-x.spend);
+
+  const sum=(arr,k)=>arr.reduce((t,x)=>t+x[k],0);
+  const spend=sum(ads,'spend');
+  const metaOrders=orders.filter(o=>o.is_meta_ad);
+  const s={
+    spend, impressions:sum(ads,'impressions'), clicks:sum(ads,'clicks'),
+    visits:sum(ads,'visits'), meta_purchases:sum(ads,'mp'), meta_value:sum(ads,'mv'),
+    shop_orders_ads:metaOrders.length, shop_revenue_ads:metaOrders.reduce((t,o)=>t+o.amount,0),
+    shop_orders_total:orders.length, shop_revenue_total:orders.reduce((t,o)=>t+o.amount,0),
+  };
+  s.meta_roas=spend?+(s.meta_value/spend).toFixed(2):0;
+  s.real_roas=spend?+(s.shop_revenue_ads/spend).toFixed(2):0;
+  PERIOD={ads,orders,summary:s};
+  renderAll();
+}
+
+function renderAll(){
+  const s=PERIOD.summary;
+  $('hmeta').innerHTML=`Mis à jour le <b>${DATA.updated}</b> · du <b>${fr($('from').value)}</b> au <b>${fr($('to').value)}</b>`;
   const cards=[
-    ['Dépense',fmtCur.format(s.spend)],
-    ['CA Shopify (via ads)',fmtCur.format(s.shop_revenue_ads),`${s.shop_orders_ads} commandes`],
-    ['ROAS réel',s.real_roas+'×',`Meta annonce ${s.meta_roas}×`],
-    ['Purchases Meta',fmtNum.format(s.meta_purchases),`vs ${s.shop_orders_ads} Shopify`],
-    ['Visites site',fmtNum.format(s.visits)],
-    ['Clics',fmtNum.format(s.clicks)],
-    ['CA boutique TOTAL',fmtCur.format(s.shop_revenue_total),`${s.shop_orders_total} commandes`],
-    ['CA attribué Meta',fmtCur.format(s.meta_value)],
+    ['Dépense',fmtCur.format(s.spend),'',0],
+    ['CA Shopify via ads',fmtCur.format(s.shop_revenue_ads),`${s.shop_orders_ads} commandes`,1],
+    ['ROAS réel',s.real_roas+'×',`Meta annonce ${s.meta_roas}×`,1],
+    ['Purchases Meta',fmtNum.format(s.meta_purchases),`vs ${s.shop_orders_ads} Shopify`,0],
+    ['Visites site',fmtNum.format(s.visits),'',0],
+    ['Clics',fmtNum.format(s.clicks),'',0],
+    ['CA boutique total',fmtCur.format(s.shop_revenue_total),`${s.shop_orders_total} commandes`,0],
+    ['CA attribué Meta',fmtCur.format(s.meta_value),'',0],
   ];
-  $('cards').innerHTML=cards.map(([l,v,sub])=>
-    `<div class="card"><div class="lbl">${l}</div><div class="val">${v}</div>${sub?`<div class="sub">${sub}</div>`:''}</div>`).join('');
-
-  fillCampaigns();
-  drawChart();
-  renderAds();
-  renderOrders();
+  $('cards').innerHTML=cards.map(([l,v,sub,hl])=>
+    `<div class="card${hl?' hl':''}"><div class="lbl">${l}</div><div class="val">${v}</div>${sub?`<div class="sub">${sub}</div>`:''}</div>`).join('');
+  fillCampaigns(); drawChart(); renderAds(); renderOrders();
 }
+const fr=d=>d?d.split('-').reverse().join('/'):'';
 
-function uniqCamps(){
-  return [...new Set(DATA.ads.map(a=>a.campaign).filter(Boolean))].sort();
-}
 function fillCampaigns(){
-  const camps=uniqCamps();
-  const opts='<option value="">Toutes les campagnes</option>'+camps.map(c=>`<option>${esc(c)}</option>`).join('');
+  const camps=[...new Set(PERIOD.ads.map(a=>a.campaign).filter(Boolean))].sort();
+  const cur=v=>`<option value="${esc(v)}">${esc(v)}</option>`;
+  const opts='<option value="">Toutes les campagnes</option>'+camps.map(cur).join('');
+  const a=$('adCamp').value,o=$('ordCamp').value;
   $('adCamp').innerHTML=opts; $('ordCamp').innerHTML=opts;
+  $('adCamp').value=a; $('ordCamp').value=o;
 }
 
 function drawChart(){
   const agg={};
-  DATA.ads.forEach(a=>{
-    const k=a.campaign||'—';
-    agg[k]=agg[k]||{spend:0,rev:0};
-    agg[k].spend+=a.spend; agg[k].rev+=a.shop_revenue;
-  });
+  PERIOD.ads.forEach(a=>{const k=a.campaign||'—';agg[k]=agg[k]||{spend:0,rev:0};agg[k].spend+=a.spend;agg[k].rev+=a.shop_revenue;});
   const labels=Object.keys(agg).sort((a,b)=>agg[b].spend-agg[a].spend);
   if(chart)chart.destroy();
+  Chart.defaults.font.family="'Jost',sans-serif";
   chart=new Chart($('chart'),{type:'bar',data:{labels,datasets:[
-    {label:'Dépense',data:labels.map(l=>agg[l].spend),backgroundColor:'#e29ac0'},
-    {label:'CA Shopify',data:labels.map(l=>agg[l].rev),backgroundColor:'#5ed6a0'},
-  ]},options:{responsive:true,plugins:{legend:{labels:{color:'#e8eaed'}}},
-    scales:{x:{ticks:{color:'#9aa3b2'},grid:{display:false}},
-            y:{ticks:{color:'#9aa3b2'},grid:{color:'#262b36'}}}}});
+    {label:'Dépense',data:labels.map(l=>agg[l].spend),backgroundColor:'#E58A6F',borderRadius:6,maxBarThickness:34},
+    {label:'CA Shopify',data:labels.map(l=>agg[l].rev),backgroundColor:'#6DAAA6',borderRadius:6,maxBarThickness:34},
+  ]},options:{responsive:true,plugins:{legend:{labels:{color:'#2E2A26',usePointStyle:true,pointStyle:'circle'}}},
+    scales:{x:{ticks:{color:'#A79E90'},grid:{display:false}},y:{ticks:{color:'#A79E90'},grid:{color:'#F2EDE4'}}}}});
 }
 
-const esc=s=>String(s??'').replace(/[<>&]/g,m=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[m]));
 function sortState(t){t._sc=t._sc||{k:null,dir:1};return t._sc;}
-function makeTable(el,cols,rows){
+function makeTable(el,cols,rows,onRow){
   const st=sortState(el);
-  if(st.k){rows=[...rows].sort((a,b)=>{
-    let x=a[st.k],y=b[st.k];
+  let sorted=rows;
+  if(st.k){sorted=[...rows].sort((a,b)=>{let x=a[st.k],y=b[st.k];
     if(typeof x==='number'&&typeof y==='number')return (x-y)*st.dir;
-    return String(x).localeCompare(String(y),'fr')*st.dir;
-  });}
+    return String(x).localeCompare(String(y),'fr')*st.dir;});}
   el.innerHTML='<thead><tr>'+cols.map(c=>
-    `<th class="${c.l?'l':''}" data-k="${c.k}">${c.t}${st.k===c.k?(st.dir>0?' ▲':' ▼'):''}</th>`).join('')+'</tr></thead>'+
-    '<tbody>'+rows.map(r=>'<tr>'+cols.map(c=>
+    `<th class="${c.l?'l':''}" data-k="${c.k}">${c.t}${st.k===c.k?(st.dir>0?' ↑':' ↓'):''}</th>`).join('')+'</tr></thead>'+
+    `<tbody class="${onRow?'clik':''}">`+sorted.map(r=>'<tr>'+cols.map(c=>
       `<td class="${c.l?'l':''}">${c.f?c.f(r[c.k],r):esc(r[c.k])}</td>`).join('')+'</tr>').join('')+'</tbody>';
   el.querySelectorAll('th').forEach(th=>th.onclick=()=>{
     const k=th.dataset.k; if(st.k===k)st.dir*=-1; else{st.k=k;st.dir=1;}
-    (el===$('adsTable')?renderAds:renderOrders)();
-  });
+    (el===$('adsTable')?renderAds:renderOrders)();});
+  if(onRow)el.querySelectorAll('tbody tr').forEach((tr,i)=>tr.onclick=()=>onRow(sorted[i]));
 }
 
 function renderAds(){
   const q=$('adSearch').value.toLowerCase(), camp=$('adCamp').value;
-  let rows=DATA.ads.filter(a=>
-    (!camp||a.campaign===camp) &&
-    (!q||(a.ad+a.campaign+a.adset).toLowerCase().includes(q)));
+  const rows=PERIOD.ads.filter(a=>(!camp||a.campaign===camp)&&(!q||(a.ad+a.campaign+a.adset).toLowerCase().includes(q)));
   const cur=v=>fmtCur.format(v||0), num=v=>fmtNum.format(v||0);
   const roas=v=>`<span class="${v>=1?'pos':'neg'}">${(v||0).toFixed(2)}×</span>`;
   makeTable($('adsTable'),[
     {k:'ad',t:'Ad',l:1},{k:'campaign',t:'Campagne',l:1},
-    {k:'spend',t:'Dépense',f:cur},{k:'clicks',t:'Clics',f:num},
-    {k:'visits',t:'Visites',f:num},
-    {k:'meta_purchases',t:'Achats Meta',f:num},
-    {k:'shop_orders',t:'Cmd Shopify',f:num},
-    {k:'shop_revenue',t:'CA Shopify',f:cur},
-    {k:'meta_roas',t:'ROAS Meta',f:roas},
-    {k:'real_roas',t:'ROAS réel',f:roas},
-    {k:'cpc',t:'CPC',f:cur},{k:'ctr',t:'CTR',f:v=>(v||0).toFixed(2)+'%'},
-    {k:'cost_per_purchase',t:'Coût/achat',f:cur},
+    {k:'spend',t:'Dépense',f:cur},{k:'clicks',t:'Clics',f:num},{k:'visits',t:'Visites',f:num},
+    {k:'mp',t:'Achats Meta',f:num},{k:'shop_orders',t:'Cmd Shopify',f:num},
+    {k:'shop_revenue',t:'CA Shopify',f:cur},{k:'meta_roas',t:'ROAS Meta',f:roas},
+    {k:'real_roas',t:'ROAS réel',f:roas},{k:'cpc',t:'CPC',f:cur},
+    {k:'ctr',t:'CTR',f:v=>(v||0).toFixed(2)+'%'},{k:'cost_per_purchase',t:'Coût/achat',f:cur},
   ],rows);
   $('adsCount').textContent=`(${rows.length})`;
 }
 
 function renderOrders(){
   const q=$('ordSearch').value.toLowerCase(), camp=$('ordCamp').value, metaOnly=$('ordMeta').checked;
-  let rows=DATA.orders.filter(o=>
-    (!metaOnly||o.is_meta_ad) &&
-    (!camp||o.campaign===camp) &&
-    (!q||(o.order+o.source+o.products+o.campaign).toLowerCase().includes(q)));
+  const rows=PERIOD.orders.filter(o=>o.ad_id&&(!metaOnly||o.is_meta_ad)&&(!camp||o.campaign===camp)&&
+    (!q||(o.order+o.source+o.campaign+o.country+o.products.map(p=>p.title).join(' ')).toLowerCase().includes(q)));
   const cur=v=>fmtCur.format(v||0);
-  const src=(v,r)=>`<span class="tag ${r.is_meta_ad?'':'org'}">${esc(v)}</span>`;
   makeTable($('ordTable'),[
-    {k:'order',t:'N° commande',l:1},{k:'date',t:'Date',l:1},
-    {k:'source',t:'Source',l:1,f:src},{k:'campaign',t:'Campagne',l:1},
+    {k:'order',t:'N°',l:1},{k:'date',t:'Date',l:1,f:fr},
+    {k:'first_order',t:'Client',l:1,f:v=>v?'<span class="new">✨ 1ʳᵉ</span>':'<span class="rec">récurrent</span>'},
+    {k:'source',t:'Ad',l:1,f:(v,r)=>`<span class="tag ${r.is_meta_ad?'':'org'}">${esc(v)}</span>`},
+    {k:'campaign',t:'Campagne',l:1},{k:'country',t:'Pays',l:1},
     {k:'items',t:'Articles'},{k:'amount',t:'Montant',f:cur},
     {k:'status',t:'Statut',l:1,f:v=>`<span class="pill">${esc(v)}</span>`},
-    {k:'products',t:'Produits',l:1},
-  ],rows);
+  ],rows,openModal);
   $('ordCount').textContent=`(${rows.length})`;
 }
 
-['adSearch','adCamp'].forEach(id=>$(id).addEventListener('input',renderAds));
-['ordSearch','ordCamp','ordMeta'].forEach(id=>$(id).addEventListener('input',renderOrders));
+function openModal(o){
+  const prod=o.products.map(p=>
+    `<div class="mprod"><span>${esc(p.title)} <b style="color:var(--mut)">×${p.qty}</b></span><span>${fmtCur.format(p.price*p.qty)}</span></div>`).join('');
+  $('mbody').innerHTML=`
+    <button class="x" onclick="closeModal()">✕</button>
+    <div class="eyebrow">Commande</div>
+    <h2 class="mhead serif">${esc(o.order)}</h2>
+    <div style="margin-bottom:16px">${o.first_order?'<span class="new">✨ Première commande</span>':'<span class="rec">Client récurrent</span>'}</div>
+    <div class="mrow"><span>Date</span><span>${fr(o.date)}</span></div>
+    <div class="mrow"><span>Pays</span><span>${esc(o.country)}</span></div>
+    <div class="mrow"><span>Ad d'origine</span><span>${esc(o.source)}</span></div>
+    <div class="mrow"><span>Campagne</span><span>${esc(o.campaign)}</span></div>
+    <div class="mrow"><span>Statut paiement</span><span>${esc(o.status)}</span></div>
+    <div class="eyebrow" style="margin:20px 0 8px">Articles (${o.items})</div>
+    ${prod||'<div class="rec">—</div>'}
+    <div class="mrow" style="border-bottom:none;font-size:16px;margin-top:6px"><span style="color:var(--txt)"><b>Total</b></span><span><b>${fmtCur.format(o.amount)}</b></span></div>`;
+  $('modal').classList.add('open');
+}
+function closeModal(){$('modal').classList.remove('open');}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
 $('pw').addEventListener('keydown',e=>{if(e.key==='Enter')unlock();});
 
-// Auto-déverrouillage si le mot de passe est déjà en session
-window.addEventListener('load',()=>{
-  const saved=sessionStorage.getItem('mpw');
-  if(saved){$('pw').value=saved;unlock();}
-});
+window.addEventListener('load',()=>{const s=sessionStorage.getItem('mpw');if(s){$('pw').value=s;unlock();}});
 </script>
 </body>
 </html>

@@ -29,8 +29,11 @@ META_ACCESS_TOKEN = _require("META_ACCESS_TOKEN")
 # Doit être au format act_1234567890
 META_AD_ACCOUNT_ID = _require("META_AD_ACCOUNT_ID")
 META_API_VERSION = os.environ.get("META_API_VERSION", "v21.0")
-# Fenêtre temporelle des stats Meta : today, yesterday, last_7d, last_14d, last_30d, last_90d, maximum
+# Fenêtre affichée par défaut dans le Google Sheet
 META_DATE_PRESET = os.environ.get("META_DATE_PRESET", "last_30d")
+# Fenêtre RÉCUPÉRÉE pour le site (détail par jour) — la période est ensuite choisie dans le navigateur
+SITE_FETCH_PRESET = os.environ.get("SITE_FETCH_PRESET", "last_90d")
+SITE_FETCH_DAYS = int(os.environ.get("SITE_FETCH_DAYS", "90"))
 
 # --- Shopify (app Dev Dashboard, client credentials grant) ---
 SHOPIFY_STORE = _require("SHOPIFY_STORE")          # ex: mincaparis.myshopify.com

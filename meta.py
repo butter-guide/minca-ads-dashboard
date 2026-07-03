@@ -1,9 +1,7 @@
-"""Récupère les stats par ad depuis l'API Meta Marketing."""
+"""Récupère les stats par ad depuis l'API Meta Marketing (détail par jour)."""
 import requests
 import config
 
-# Types d'action Meta qui correspondent à "visite du site" et "achat".
-# Meta renvoie plusieurs variantes selon le pixel/CAPI ; on prend la plus fiable dispo.
 VISIT_ACTIONS = ["landing_page_view"]
 PURCHASE_ACTIONS = [
     "offsite_conversion.fb_pixel_purchase",
@@ -13,7 +11,6 @@ PURCHASE_ACTIONS = [
 
 
 def _pick_action(actions, wanted_types):
-    """Dans la liste 'actions' de Meta, renvoie la valeur du 1er type trouvé (par priorité)."""
     if not actions:
         return 0.0
     by_type = {a["action_type"]: float(a.get("value", 0)) for a in actions}
@@ -23,62 +20,91 @@ def _pick_action(actions, wanted_types):
     return 0.0
 
 
-def fetch_ads_insights():
-    """Renvoie une liste de dicts, un par ad, avec toutes les métriques Meta."""
+def fetch_ads_insights_daily(date_preset=None):
+    """Renvoie une ligne PAR AD ET PAR JOUR (time_increment=1) sur la fenêtre demandée.
+
+    Chaque dict : ad_id, ad_name, adset_name, campaign_name, date, + métriques brutes.
+    Le navigateur ré-agrège ensuite sur la période choisie par l'utilisatrice.
+    """
+    preset = date_preset or config.SITE_FETCH_PRESET
     url = f"https://graph.facebook.com/{config.META_API_VERSION}/{config.META_AD_ACCOUNT_ID}/insights"
     params = {
         "access_token": config.META_ACCESS_TOKEN,
         "level": "ad",
-        "date_preset": config.META_DATE_PRESET,
+        "date_preset": preset,
+        "time_increment": 1,
         "fields": ",".join([
             "ad_id", "ad_name", "adset_name", "campaign_name",
             "spend", "impressions", "clicks", "inline_link_clicks",
-            "cpc", "ctr", "cpm", "actions", "action_values",
+            "actions", "action_values",
         ]),
         "limit": 500,
     }
 
     rows = []
     while url:
-        resp = requests.get(url, params=params, timeout=60)
+        resp = requests.get(url, params=params, timeout=90)
         if resp.status_code != 200:
             raise SystemExit(f"❌ Erreur Meta API ({resp.status_code}): {resp.text}")
         payload = resp.json()
         for d in payload.get("data", []):
-            spend = float(d.get("spend", 0))
-            visits = _pick_action(d.get("actions"), VISIT_ACTIONS)
-            purchases = _pick_action(d.get("actions"), PURCHASE_ACTIONS)
-            purchase_value = _pick_action(d.get("action_values"), PURCHASE_ACTIONS)
-            link_clicks = float(d.get("inline_link_clicks", 0))
             rows.append({
                 "campaign_name": d.get("campaign_name", ""),
                 "adset_name": d.get("adset_name", ""),
                 "ad_name": d.get("ad_name", ""),
                 "ad_id": d.get("ad_id", ""),
-                "spend": round(spend, 2),
+                "date": d.get("date_start", ""),
+                "spend": round(float(d.get("spend", 0)), 2),
                 "impressions": int(float(d.get("impressions", 0))),
                 "clicks": int(float(d.get("clicks", 0))),
-                "link_clicks": int(link_clicks),
-                "visits": int(visits),
-                "meta_purchases": int(purchases),
-                "meta_purchase_value": round(purchase_value, 2),
-                "cpc": round(float(d.get("cpc", 0) or 0), 2),
-                "ctr": round(float(d.get("ctr", 0) or 0), 2),
-                "cpm": round(float(d.get("cpm", 0) or 0), 2),
-                # Métriques dérivées
-                "cost_per_visit": round(spend / visits, 2) if visits else 0.0,
-                "cost_per_purchase": round(spend / purchases, 2) if purchases else 0.0,
-                "meta_roas": round(purchase_value / spend, 2) if spend else 0.0,
+                "link_clicks": int(float(d.get("inline_link_clicks", 0))),
+                "visits": int(_pick_action(d.get("actions"), VISIT_ACTIONS)),
+                "meta_purchases": int(_pick_action(d.get("actions"), PURCHASE_ACTIONS)),
+                "meta_value": round(_pick_action(d.get("action_values"), PURCHASE_ACTIONS), 2),
             })
-        # pagination
         url = payload.get("paging", {}).get("next")
-        params = None  # l'URL 'next' contient déjà tous les paramètres
+        params = None
 
     return rows
 
 
+def aggregate_window(daily_rows, since_date=None):
+    """Agrège les lignes quotidiennes par ad (optionnellement depuis since_date 'YYYY-MM-DD').
+
+    Renvoie la même structure que l'ancien fetch_ads_insights (pour le Google Sheet).
+    """
+    agg = {}
+    for r in daily_rows:
+        if since_date and r["date"] < since_date:
+            continue
+        a = agg.setdefault(r["ad_id"], {
+            "campaign_name": r["campaign_name"], "adset_name": r["adset_name"],
+            "ad_name": r["ad_name"], "ad_id": r["ad_id"],
+            "spend": 0.0, "impressions": 0, "clicks": 0, "link_clicks": 0,
+            "visits": 0, "meta_purchases": 0, "meta_purchase_value": 0.0,
+        })
+        a["spend"] += r["spend"]; a["impressions"] += r["impressions"]
+        a["clicks"] += r["clicks"]; a["link_clicks"] += r["link_clicks"]
+        a["visits"] += r["visits"]; a["meta_purchases"] += r["meta_purchases"]
+        a["meta_purchase_value"] += r["meta_value"]
+
+    out = []
+    for a in agg.values():
+        spend = round(a["spend"], 2); v = a["visits"]; p = a["meta_purchases"]
+        out.append({**a,
+            "spend": spend,
+            "meta_purchase_value": round(a["meta_purchase_value"], 2),
+            "cpc": round(spend / a["clicks"], 2) if a["clicks"] else 0.0,
+            "ctr": round(a["clicks"] / a["impressions"] * 100, 2) if a["impressions"] else 0.0,
+            "cpm": round(spend / a["impressions"] * 1000, 2) if a["impressions"] else 0.0,
+            "cost_per_visit": round(spend / v, 2) if v else 0.0,
+            "cost_per_purchase": round(spend / p, 2) if p else 0.0,
+            "meta_roas": round(a["meta_purchase_value"] / spend, 2) if spend else 0.0,
+        })
+    return out
+
+
 if __name__ == "__main__":
-    import json
-    data = fetch_ads_insights()
-    print(f"{len(data)} ads récupérées")
-    print(json.dumps(data[:2], indent=2, ensure_ascii=False))
+    daily = fetch_ads_insights_daily()
+    print(f"{len(daily)} lignes jour×ad")
+    print(f"{len(aggregate_window(daily))} ads au total")

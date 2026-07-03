@@ -1,14 +1,9 @@
-"""Récupère les vraies commandes Shopify et les relie aux ads via les UTM.
+"""Récupère les commandes Shopify (détaillées) et les relie aux ads via les UTM.
 
 (La 1re ligne active la syntaxe de type moderne même sur Python 3.9.)
 
 Le lien commande -> ad se fait via le paramètre utm_content de l'URL d'arrivée
-(order.landing_site). Pour que ça marche, tes ads Meta doivent avoir dans
-'Paramètres d'URL' :
-
-    utm_source=facebook&utm_medium=paid&utm_campaign={{campaign.name}}&utm_content={{ad.id}}
-
-Ainsi utm_content = l'ID de l'ad Meta, qu'on retrouve dans meta.py -> 'ad_id'.
+(order.landing_site) : utm_content = ID de l'ad Meta (voir meta.py -> 'ad_id').
 """
 from __future__ import annotations
 
@@ -17,25 +12,17 @@ from datetime import datetime, timedelta, timezone
 import requests
 import config
 
-# Combien de jours de commandes on remonte (aligné grosso modo sur la fenêtre Meta)
-PRESET_DAYS = {
-    "today": 1, "yesterday": 2, "last_7d": 7, "last_14d": 14,
-    "last_30d": 30, "last_90d": 90, "maximum": 365,
-}
+
+def _since_date(days: int) -> str:
+    return (datetime.now(timezone.utc) - timedelta(days=days)).date().isoformat()
 
 
-def _created_at_min():
-    days = PRESET_DAYS.get(config.META_DATE_PRESET, 30)
-    since = datetime.now(timezone.utc) - timedelta(days=days)
-    return since.isoformat()
+def _created_at_min(days: int) -> str:
+    return (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
 
 
 def get_access_token() -> str:
-    """Échange le Client ID + Secret contre un token d'accès (client credentials grant).
-
-    Valable 24h — on en redemande un frais à chaque exécution, donc rien à renouveler
-    à la main. Doc : https://shopify.dev/docs/apps/build/dev-dashboard/get-api-access-tokens
-    """
+    """Échange le Client ID + Secret contre un token d'accès (client credentials grant, 24h)."""
     url = f"https://{config.SHOPIFY_STORE}/admin/oauth/access_token"
     resp = requests.post(url, json={
         "client_id": config.SHOPIFY_CLIENT_ID,
@@ -48,7 +35,6 @@ def get_access_token() -> str:
 
 
 def _extract_ad_id(landing_site: str) -> str | None:
-    """Extrait utm_content (= ad_id Meta) depuis l'URL d'arrivée d'une commande."""
     if not landing_site:
         return None
     try:
@@ -59,88 +45,103 @@ def _extract_ad_id(landing_site: str) -> str | None:
     return vals[0] if vals else None
 
 
-def fetch_orders_by_ad():
-    """Renvoie (par_ad, totaux, commandes).
-
-    par_ad     : dict { utm_content -> {"orders": n, "revenue": float} }
-    totaux     : dict { "orders", "revenue", "orders_from_meta", "revenue_from_meta" }
-    commandes  : liste des commandes taguées (une par commande avec un utm_content),
-                 chacune : {order, date, utm_content, is_meta_ad, items, amount, status, products}
-    """
-    base = f"https://{config.SHOPIFY_STORE}/admin/api/{config.SHOPIFY_API_VERSION}/orders.json"
-    headers = {"X-Shopify-Access-Token": get_access_token()}
-    params = {
-        "status": "any",
-        "created_at_min": _created_at_min(),
-        "limit": 250,
-        "fields": "id,name,total_price,landing_site,created_at,financial_status,cancelled_at,line_items",
-    }
-
-    by_ad = {}
-    orders_detail = []
-    totals = {"orders": 0, "revenue": 0.0, "orders_from_meta": 0, "revenue_from_meta": 0.0}
-    url = base
-
-    while url:
-        resp = requests.get(url, params=params, headers=headers, timeout=60)
-        if resp.status_code != 200:
-            raise SystemExit(f"❌ Erreur Shopify API ({resp.status_code}): {resp.text}")
-        orders = resp.json().get("orders", [])
-        for o in orders:
-            # On ignore les commandes annulées
-            if o.get("cancelled_at"):
-                continue
-            revenue = float(o.get("total_price", 0) or 0)
-            totals["orders"] += 1
-            totals["revenue"] += revenue
-
-            ad_id = _extract_ad_id(o.get("landing_site", ""))
-            if ad_id:
-                slot = by_ad.setdefault(ad_id, {"orders": 0, "revenue": 0.0})
-                slot["orders"] += 1
-                slot["revenue"] += revenue
-                totals["orders_from_meta"] += 1
-                totals["revenue_from_meta"] += revenue
-
-                line_items = o.get("line_items", []) or []
-                orders_detail.append({
-                    "order": o.get("name", ""),                       # ex: #1234
-                    "date": (o.get("created_at") or "")[:10],
-                    "utm_content": ad_id,
-                    "is_meta_ad": ad_id.isdigit(),                    # un ID d'ad Meta = que des chiffres
-                    "items": sum(int(li.get("quantity", 0)) for li in line_items),
-                    "amount": round(revenue, 2),
-                    "status": o.get("financial_status", ""),
-                    "products": ", ".join(li.get("title", "") for li in line_items)[:120],
-                })
-
-        # Pagination Shopify via l'en-tête Link (rel="next")
-        url = _next_link(resp.headers.get("Link", ""))
-        params = None  # l'URL next contient déjà tout
-
-    # Arrondis
-    totals["revenue"] = round(totals["revenue"], 2)
-    totals["revenue_from_meta"] = round(totals["revenue_from_meta"], 2)
-    for v in by_ad.values():
-        v["revenue"] = round(v["revenue"], 2)
-
-    return by_ad, totals, orders_detail
-
-
 def _next_link(link_header: str):
-    """Parse l'en-tête Link de Shopify pour trouver l'URL de la page suivante."""
     if not link_header:
         return None
     for part in link_header.split(","):
         section = part.split(";")
-        if len(section) < 2:
-            continue
-        if 'rel="next"' in section[1]:
+        if len(section) >= 2 and 'rel="next"' in section[1]:
             return section[0].strip().strip("<>")
     return None
 
 
+def fetch_orders_all(days: int | None = None):
+    """Renvoie la liste de TOUTES les commandes (non annulées) sur la fenêtre, détaillées.
+
+    Chaque commande : order, date, amount, items, status, country, first_order,
+    ad_id (=utm_content ou ""), is_meta_ad, products [{title, qty, price}].
+    """
+    days = days or config.SITE_FETCH_DAYS
+    base = f"https://{config.SHOPIFY_STORE}/admin/api/{config.SHOPIFY_API_VERSION}/orders.json"
+    headers = {"X-Shopify-Access-Token": get_access_token()}
+    params = {
+        "status": "any",
+        "created_at_min": _created_at_min(days),
+        "limit": 250,
+        "fields": ("id,name,total_price,landing_site,created_at,financial_status,"
+                   "cancelled_at,line_items,customer,shipping_address"),
+    }
+
+    orders = []
+    url = base
+    while url:
+        resp = requests.get(url, params=params, headers=headers, timeout=90)
+        if resp.status_code != 200:
+            raise SystemExit(f"❌ Erreur Shopify API ({resp.status_code}): {resp.text}")
+        for o in resp.json().get("orders", []):
+            if o.get("cancelled_at"):
+                continue
+            ad_id = _extract_ad_id(o.get("landing_site", "")) or ""
+            line_items = o.get("line_items", []) or []
+            cust = o.get("customer") or {}
+            ship = o.get("shipping_address") or {}
+            order_date = (o.get("created_at") or "")[:10]
+            # orders_count a été retiré de l'API REST → on déduit la 1re commande via la
+            # date de création du client (créé le jour de la commande = nouveau client).
+            cust_created = (cust.get("created_at") or "")[:10]
+            orders.append({
+                "order": o.get("name", ""),
+                "date": order_date,
+                "amount": round(float(o.get("total_price", 0) or 0), 2),
+                "items": sum(int(li.get("quantity", 0)) for li in line_items),
+                "status": o.get("financial_status", ""),
+                "country": ship.get("country") or "—",
+                "first_order": bool(cust_created) and cust_created == order_date,
+                "ad_id": ad_id,
+                "is_meta_ad": ad_id.isdigit(),
+                "products": [{
+                    "title": li.get("title", ""),
+                    "qty": int(li.get("quantity", 0)),
+                    "price": round(float(li.get("price", 0) or 0), 2),
+                } for li in line_items],
+            })
+        url = _next_link(resp.headers.get("Link", ""))
+        params = None
+    return orders
+
+
+def aggregate_orders(orders, days: int):
+    """Agrège les commandes (depuis N jours) pour le Google Sheet.
+
+    Renvoie (by_ad, totals) comme l'ancienne version.
+    """
+    since = _since_date(days)
+    by_ad = {}
+    totals = {"orders": 0, "revenue": 0.0, "orders_from_meta": 0, "revenue_from_meta": 0.0}
+    for o in orders:
+        if o["date"] < since:
+            continue
+        totals["orders"] += 1
+        totals["revenue"] += o["amount"]
+        if o["ad_id"]:
+            slot = by_ad.setdefault(o["ad_id"], {"orders": 0, "revenue": 0.0})
+            slot["orders"] += 1
+            slot["revenue"] += o["amount"]
+            totals["orders_from_meta"] += 1
+            totals["revenue_from_meta"] += o["amount"]
+    totals["revenue"] = round(totals["revenue"], 2)
+    totals["revenue_from_meta"] = round(totals["revenue_from_meta"], 2)
+    for v in by_ad.values():
+        v["revenue"] = round(v["revenue"], 2)
+    return by_ad, totals
+
+
 if __name__ == "__main__":
-    by_ad, totals, detail = fetch_orders_by_ad()
-    print("Totaux :", totals)
-    print(f"{len(by_ad)} sources taguées, {len(detail)} commandes détaillées")
+    orders = fetch_orders_all()
+    print(f"{len(orders)} commandes récupérées")
+    with_country = sum(1 for o in orders if o["country"] != "—")
+    firsts = sum(1 for o in orders if o["first_order"])
+    print(f"  pays renseigné: {with_country} | 1res commandes: {firsts}")
+    if orders:
+        import json
+        print(json.dumps(orders[0], indent=2, ensure_ascii=False))
